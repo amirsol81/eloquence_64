@@ -40,8 +40,6 @@ class AudioWorker(threading.Thread):
         self._running = True
         self._stopping = False
         self._player_lock = threading.RLock()
-        self._idle_timer: Optional[threading.Timer] = None
-        self._idle_lock = threading.Lock()
 
     def run(self) -> None:
         while self._running:
@@ -55,16 +53,17 @@ class AudioWorker(threading.Thread):
             if seq < self._client._sequence:
                 self._queue.task_done()
                 continue
-            if not data:
-                if index is not None:
-                    self._invoke_index_callback(index)
+            if not data and index is None:
                 if is_final:
-                    self._schedule_idle()
+                    with self._player_lock:
+                        if not self._stopping:
+                            self._player.idle()
+                    if not self._stopping:
+                        self._invoke_index_callback(None)
                 self._queue.task_done()
                 continue
             on_done = None
             if index is not None:
-
                 def _callback(i=index):
                     self._invoke_index_callback(i)
 
@@ -89,32 +88,7 @@ class AudioWorker(threading.Thread):
     def stop(self) -> None:
         self._stopping = True
         self._running = False
-        # Cancel any pending idle timer
-        with self._idle_lock:
-            if self._idle_timer:
-                self._idle_timer.cancel()
-                self._idle_timer = None
         self._queue.put(None)
-
-    def _schedule_idle(self) -> None:
-        """Schedule idle() to be called after a delay."""
-        if self._stopping:
-            return
-        with self._idle_lock:
-            # Cancel any existing timer
-            if self._idle_timer:
-                self._idle_timer.cancel()
-            # Schedule new idle
-            self._idle_timer = threading.Timer(0.3, self._idle_player)
-            self._idle_timer.start()
-            LOGGER.debug("Idle scheduled for 0.3s from now")
-
-    def _idle_player(self) -> None:
-        """Called by timer after speech is complete."""
-        # Do NOT call idle() - it blocks waiting for buffer to drain
-        # Just notify done speaking
-        if not self._stopping:
-            self._invoke_index_callback(None)
 
     def _make_on_done(self, callback, is_final: bool):
         def _on_done() -> None:
@@ -297,11 +271,6 @@ class EloquenceHostClient:
                     self._player.stop()
                 except Exception:
                     LOGGER.exception("WavePlayer stop failed")
-                try:
-                    self._player.idle()
-                except Exception:
-                    LOGGER.exception("WavePlayer idle failed")
-
 
     # ------------------------------------------------------------------
     def shutdown(self) -> None:
