@@ -215,7 +215,7 @@ class SynthDriver(synthDriverHandler.SynthDriver):
      ri = li + 1
      ra = ck[li]
      rb = ck[ri]
-    factor = 1.0 * coefficients[ra] + (coefficients[rb] - coefficients[ra]) * (self.rate - ra) / (rb-ra)
+     factor = 1.0 * coefficients[ra] + (coefficients[rb] - coefficients[ra]) * (self.rate - ra) / (rb-ra)
     pFactor = factor*item.time
     pFactor = int(pFactor)
     outlist.append((_eloquence.speak, (f'`p{pFactor}.',)))
