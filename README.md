@@ -26,7 +26,7 @@ eloquence_host32.exe
 By default, this file is located at:
 
 ```
-C:\Users\YourName\AppData\Roaming\nvda\addons\Eloquence\synthDrivers\
+C:\Users\YourUsername\AppData\Roaming\nvda\addons\Eloquence\synthDrivers\
 ```
 
 To enable Eloquence on secure, start-up, and log-on screens in NVDA 64-bit, manually copy the file `eloquence_host32.exe` to:
